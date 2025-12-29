@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Connect | Privado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .contact-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-[#f8fafc] text-slate-900 min-h-screen">
+
+    <!-- Navegación -->
+    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-200">
+                    <i data-lucide="shield-check" class="text-white w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold leading-none">CRM Privado</h1>
+                    <span class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Acceso Seguro OAuth2</span>
+                </div>
+            </div>
+
+            <div id="user-profile" class="hidden flex items-center gap-3 pl-3">
+                <div class="text-right hidden sm:block">
+                    <p id="user-name" class="text-sm font-bold leading-none"></p>
+                    <span class="text-[10px] text-emerald-500 font-bold uppercase">Sesión Activa</span>
+                </div>
+                <img id="user-avatar" src="" class="w-10 h-10 rounded-full border-2 border-white shadow-sm ring-1 ring-slate-100">
+                <button id="btn-logout" class="p-2 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors text-slate-400" title="Cerrar sesión">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <!-- Notificaciones -->
+        <div id="status-container" class="hidden fixed bottom-6 right-6 z-[100] max-w-sm w-full animate-in slide-in-from-right-10">
+            <div class="bg-white border border-slate-200 shadow-2xl rounded-2xl p-4 flex items-start gap-4">
+                <div id="status-icon" class="mt-0.5"></div>
+                <div class="flex-1 text-sm font-semibold text-slate-800" id="status-message"></div>
+                <button onclick="this.parentElement.parentElement.classList.add('hidden')" class="text-slate-400"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Formulario Lateral -->
+            <div class="lg:col-span-4">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+                    <h2 class="text-xl font-bold text-slate-900 mb-6">Nuevo Contacto</h2>
+                    <form id="contact-form" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input id="first-name" type="text" placeholder="Nombre" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                            <input id="last-name" type="text" placeholder="Apellido" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                        </div>
+                        <input id="email" type="email" placeholder="Email" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                        <input id="phone" type="tel" placeholder="Teléfono" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                        
+                        <button type="submit" id="btn-submit" disabled class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold text-sm shadow-lg shadow-blue-100 transition-all disabled:bg-slate-100 disabled:text-slate-400">
+                            Guardar en Google
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Listado Principal -->
+            <div class="lg:col-span-8 space-y-6">
+                <div class="flex gap-4">
+                    <input id="search-input" type="text" placeholder="Buscar en mis contactos..." class="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                    <button id="btn-refresh" class="hidden px-6 py-4 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 shadow-sm transition-all text-slate-700">
+                        <i data-lucide="rotate-cw" id="refresh-icon" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div id="contacts-card" class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden min-h-[400px] flex flex-col">
+                    <!-- Placeholder: Solo tú puedes entrar -->
+                    <div id="list-placeholder" class="flex-1 flex flex-col items-center justify-center p-12 text-center">
+                        <div class="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mb-6 text-blue-600">
+                            <i data-lucide="fingerprint" class="w-10 h-10"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-800">Acceso Privado</h3>
+                        <p class="text-slate-500 max-w-xs mx-auto text-sm mt-2">
+                            Haz clic abajo para autenticarte. Solo el administrador autorizado podrá ver los datos.
+                        </p>
+                        <button id="btn-auth-trigger" class="mt-8 bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold text-sm hover:bg-black transition-all flex items-center gap-2">
+                            Entrar con mi Google <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <div id="contacts-list" class="divide-y divide-slate-100 hidden"></div>
+                </div>
+                <div id="results-footer" class="hidden px-4 flex justify-between">
+                    <p id="results-count" class="text-slate-500 text-xs font-medium"></p>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                        <span class="w-2 h-2 bg-emerald-400 rounded-full"></span> Conexión Encriptada
+                    </span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const CLIENT_ID = '951167996097-55358q2vs7ickv9fp6ouhtd3qt7erhk8.apps.googleusercontent.com'; 
+        const SCOPES = 'https://www.googleapis.com/auth/contacts';
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/people/v1/rest';
+
+        let tokenClient;
+        let allContacts = [];
+
+        const el = {
+            auth: document.getElementById('btn-auth-trigger'),
+            logout: document.getElementById('btn-logout'),
+            profile: document.getElementById('user-profile'),
+            avatar: document.getElementById('user-avatar'),
+            name: document.getElementById('user-name'),
+            form: document.getElementById('contact-form'),
+            submit: document.getElementById('btn-submit'),
+            list: document.getElementById('contacts-list'),
+            placeholder: document.getElementById('list-placeholder'),
+            search: document.getElementById('search-input'),
+            refresh: document.getElementById('btn-refresh'),
+            refreshIcon: document.getElementById('refresh-icon'),
+            count: document.getElementById('results-count'),
+            footer: document.getElementById('results-footer'),
+            status: {
+                container: document.getElementById('status-container'),
+                message: document.getElementById('status-message'),
+                icon: document.getElementById('status-icon')
+            }
+        };
+
+        window.onload = () => {
+            gapi.load('client', async () => {
+                await gapi.client.init({ discoveryDocs: [DISCOVERY_DOC] });
+            });
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: (resp) => {
+                    if (resp.error) return showStatus('error', 'Acceso denegado');
+                    loadData();
+                },
+            });
+            lucide.createIcons();
+        };
+
+        el.auth.onclick = () => tokenClient.requestAccessToken({ prompt: 'consent' });
+
+        el.logout.onclick = () => {
+            const token = gapi.client.getToken();
+            if (token) {
+                google.accounts.oauth2.revoke(token.access_token);
+                gapi.client.setToken('');
+                updateUI(false);
+            }
+        };
+
+        async function loadData() {
+            el.refreshIcon.classList.add('spinner');
+            try {
+                const [contactsResp, userResp] = await Promise.all([
+                    gapi.client.people.people.connections.list({
+                        resourceName: 'people/me',
+                        pageSize: 100,
+                        personFields: 'names,emailAddresses,phoneNumbers,photos',
+                    }),
+                    gapi.client.people.people.get({
+                        resourceName: 'people/me',
+                        personFields: 'names,photos',
+                    })
+                ]);
+                allContacts = contactsResp.result.connections || [];
+                updateUI(true, userResp.result);
+                renderContacts(allContacts);
+            } catch (err) {
+                showStatus('error', 'Error al sincronizar datos');
+            } finally {
+                el.refreshIcon.classList.remove('spinner');
+            }
+        }
+
+        function updateUI(logged, user = null) {
+            if (logged) {
+                el.profile.classList.remove('hidden');
+                el.refresh.classList.remove('hidden');
+                el.footer.classList.remove('hidden');
+                el.placeholder.classList.add('hidden');
+                el.submit.disabled = false;
+                el.name.innerText = user.names[0].displayName;
+                el.avatar.src = user.photos[0].url;
+            } else {
+                el.profile.classList.add('hidden');
+                el.refresh.classList.add('hidden');
+                el.footer.classList.add('hidden');
+                el.list.classList.add('hidden');
+                el.placeholder.classList.remove('hidden');
+                el.submit.disabled = true;
+                el.form.reset();
+            }
+            lucide.createIcons();
+        }
+
+        el.form.onsubmit = async (e) => {
+            e.preventDefault();
+            el.submit.disabled = true;
+            el.submit.innerText = 'Guardando...';
+            try {
+                await gapi.client.people.people.createContact({
+                    resourceName: 'people/me',
+                    personFields: 'names,emailAddresses,phoneNumbers',
+                    resource: {
+                        names: [{ givenName: document.getElementById('first-name').value, familyName: document.getElementById('last-name').value }],
+                        emailAddresses: [{ value: document.getElementById('email').value }],
+                        phoneNumbers: [{ value: document.getElementById('phone').value }]
+                    }
+                });
+                el.form.reset();
+                showStatus('success', 'Guardado en tu Google Contacts');
+                await loadData();
+            } catch (err) {
+                showStatus('error', 'No se pudo guardar');
+            } finally {
+                el.submit.disabled = false;
+                el.submit.innerText = 'Guardar en Google';
+            }
+        };
+
+        function renderContacts(contacts) {
+            el.list.classList.remove('hidden');
+            if (contacts.length === 0) {
+                el.list.innerHTML = `<div class="p-16 text-center text-slate-400 italic text-sm">Sin contactos.</div>`;
+                el.count.innerText = "0 contactos";
+                return;
+            }
+            el.list.innerHTML = contacts.map(c => {
+                const name = c.names?.[0]?.displayName || "Sin nombre";
+                const email = c.emailAddresses?.[0]?.value || "";
+                const photo = c.photos?.[0]?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}`;
+                return `
+                <div class="contact-card p-5 flex items-center gap-5 transition-all group">
+                    <img src="${photo}" class="w-12 h-12 rounded-2xl border-2 border-slate-50">
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-slate-900 group-hover:text-blue-600 truncate">${name}</h4>
+                        <p class="text-xs text-slate-500 truncate">${email}</p>
+                    </div>
+                </div>`;
+            }).join('');
+            el.count.innerText = `${contacts.length} contactos en tu nube`;
+            lucide.createIcons();
+        }
+
+        el.search.oninput = (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allContacts.filter(c => (c.names?.[0]?.displayName || "").toLowerCase().includes(query));
+            renderContacts(filtered);
+        };
+
+        el.refresh.onclick = loadData;
+
+        function showStatus(type, message) {
+            el.status.container.classList.remove('hidden');
+            el.status.message.innerText = message;
+            el.status.icon.innerHTML = type === 'success' ? '<i data-lucide="check" class="text-emerald-500"></i>' : '<i data-lucide="x" class="text-rose-500"></i>';
+            lucide.createIcons();
+            setTimeout(() => el.status.container.classList.add('hidden'), 3000);
+        }
+    </script>
+</body>
+</html>
