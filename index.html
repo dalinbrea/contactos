@@ -84,7 +84,6 @@
                 </div>
 
                 <div id="contacts-card" class="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden min-h-[400px] flex flex-col">
-                    <!-- Placeholder: Solo tú puedes entrar -->
                     <div id="list-placeholder" class="flex-1 flex flex-col items-center justify-center p-12 text-center">
                         <div class="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mb-6 text-blue-600">
                             <i data-lucide="fingerprint" class="w-10 h-10"></i>
@@ -103,7 +102,7 @@
                 <div id="results-footer" class="hidden px-4 flex justify-between">
                     <p id="results-count" class="text-slate-500 text-xs font-medium"></p>
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                        <span class="w-2 h-2 bg-emerald-400 rounded-full"></span> Conexión Encriptada
+                        <span class="w-2 h-2 bg-emerald-400 rounded-full"></span> Conexión Segura
                     </span>
                 </div>
             </div>
@@ -199,6 +198,7 @@
                 el.submit.disabled = false;
                 el.name.innerText = user.names[0].displayName;
                 el.avatar.src = user.photos[0].url;
+                showStatus('success', 'Bienvenido de nuevo');
             } else {
                 el.profile.classList.add('hidden');
                 el.refresh.classList.add('hidden');
@@ -226,10 +226,10 @@
                     }
                 });
                 el.form.reset();
-                showStatus('success', 'Guardado en tu Google Contacts');
+                showStatus('success', 'Contacto guardado en tu cuenta');
                 await loadData();
             } catch (err) {
-                showStatus('error', 'No se pudo guardar');
+                showStatus('error', 'Error al guardar');
             } finally {
                 el.submit.disabled = false;
                 el.submit.innerText = 'Guardar en Google';
@@ -256,7 +256,7 @@
                     </div>
                 </div>`;
             }).join('');
-            el.count.innerText = `${contacts.length} contactos en tu nube`;
+            el.count.innerText = `${contacts.length} contactos sincronizados`;
             lucide.createIcons();
         }
 
